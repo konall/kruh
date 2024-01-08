@@ -22,18 +22,18 @@ interface State {
   q: string;
 }
 
-interface InternalSettings {
+interface Config {
   allowDuplicates: boolean;
 }
 
 export class Select {
   #els: Elements;
   #state: State;
-  #settings: InternalSettings;
+  #config: Config;
 
   constructor(settings: Settings) {
     this.#els = (() => {
-      const selectEl = (() => {
+      const initEl = (() => {
         if (!document.body.contains(settings.el)) {
           throw new Error(
             "Element is not present in the visible document body",
@@ -110,7 +110,7 @@ export class Select {
       })();
       boxEl.replaceChildren(selectionsEl, searchEl);
       containerEl.replaceChildren(boxEl, popoverEl);
-      selectEl.replaceWith(containerEl);
+      initEl.replaceWith(containerEl);
 
       return {
         container: containerEl,
@@ -120,7 +120,7 @@ export class Select {
       };
     })();
 
-    this.#settings = {
+    this.#config = {
       allowDuplicates: settings.allowDuplicates ?? false,
     };
 
@@ -177,7 +177,7 @@ export class Select {
 
         el.addEventListener("click", () => {
           if (
-            this.#settings.allowDuplicates ||
+            this.#config.allowDuplicates ||
             !this.#state.selections.includes(value)
           ) {
             this.setselections([...this.#state.selections, value]);
