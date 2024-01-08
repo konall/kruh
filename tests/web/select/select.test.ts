@@ -2,7 +2,7 @@ import { Select } from "../../../mod.ts";
 
 const select = new Select({
   el: document.querySelector("#x")!,
-  options: async (q) => {
+  source: async (q) => {
     if (q.length < 3) {
       return [];
     }
@@ -21,7 +21,7 @@ document.addEventListener("keypress", (e) => {
   if (e.key === "<") {
     console.log(select.options());
   } else if (e.key === ">") {
-    console.log(select.selected());
+    console.log(select.selections());
   }
 });
 

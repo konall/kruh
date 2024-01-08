@@ -9,28 +9,21 @@ Deno.test("basic", async () => {
     `<html>
       <body>
         <p>
-          <span id="abc"></span>
+          <select id="abc"></select>
         </p>
       </body>
     </html>`,
     "text/html",
-  );
+  )!;
   // @ts-ignore //
   globalThis.document = document;
 
   const select = new Select({
-    target: "#abc",
-    options: () => [{ text: "x", value: 1 }],
-    on: {
-      load() {
-        select.selected = [""];
-      },
-    },
+    // @ts-ignore //
+    el: document.querySelector("#abc")!,
+    source: () => [{ text: "x", value: 1 }],
   });
-  select.selected;
-  select.selected = ["j"];
-  console.log(select.selected);
-  console.log(select);
+  console.log(select.selections());
 
   assert(1 == 1);
 });

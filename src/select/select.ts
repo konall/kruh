@@ -3,22 +3,22 @@ import {
   InternalOptions,
   Options,
   optionsArrayToMap,
-  OptionsCallback,
+  Source,
 } from "./options.ts";
 import { Settings } from "./settings.ts";
 
 interface Elements {
   container: HTMLDivElement;
-  selected: HTMLDivElement;
+  selections: HTMLDivElement;
   search: HTMLInputElement;
   popover: HTMLDivElement;
 }
 
 interface State {
   options: InternalOptions;
-  selected: Array<string>;
+  selections: Array<string>;
   events: Events;
-  optionsCallback: OptionsCallback;
+  source: Source;
   q: string;
 }
 
@@ -62,7 +62,7 @@ export class Select {
         return el;
       })();
 
-      const selectedEl = (() => {
+      const selectionsEl = (() => {
         const el = document.createElement("div");
         return el;
       })();
@@ -108,13 +108,13 @@ export class Select {
         el.style.display = "inline";
         return el;
       })();
-      boxEl.replaceChildren(selectedEl, searchEl);
+      boxEl.replaceChildren(selectionsEl, searchEl);
       containerEl.replaceChildren(boxEl, popoverEl);
       selectEl.replaceWith(containerEl);
 
       return {
         container: containerEl,
-        selected: selectedEl,
+        selections: selectionsEl,
         search: searchEl,
         popover: popoverEl,
       };
@@ -126,9 +126,9 @@ export class Select {
 
     this.#state = {
       options: optionsArrayToMap(settings.initialOptions ?? []),
-      selected: settings.selected ?? [],
+      selections: settings.selections ?? [],
       events: settings.events ?? {},
-      optionsCallback: settings.options,
+      source: settings.source,
       q: "",
     };
 
@@ -178,9 +178,9 @@ export class Select {
         el.addEventListener("click", () => {
           if (
             this.#settings.allowDuplicates ||
-            !this.#state.selected.includes(value)
+            !this.#state.selections.includes(value)
           ) {
-            this.setSelected([...this.#state.selected, value]);
+            this.setselections([...this.#state.selections, value]);
           }
         });
         el.addEventListener("keydown", (e) => {
@@ -221,40 +221,40 @@ export class Select {
     }
   }
   async loadOptions(q: string, force = false, silent = false) {
-    const newOptions = await this.#state.optionsCallback(q, [
+    const newOptions = await this.#state.source(q, [
       ...this.#state.options.values(),
     ]);
     this.setOptions(newOptions, force, silent);
   }
 
-  selected(): Array<string> {
-    return this.#state.selected;
+  selections(): Array<string> {
+    return this.#state.selections;
   }
-  async setSelected(selected: Array<string>, force = false, silent = false) {
-    const prevSelected = this.#state.selected;
+  async setselections(selections: Array<string>, force = false, silent = false) {
+    const prevSelections = this.#state.selections;
 
     if (!force) {
-      const cancel = await this.#state.events?.beforeSelectedChanged?.(
-        selected,
-        prevSelected,
+      const cancel = await this.#state.events?.beforeSelectionsChanged?.(
+        selections,
+        prevSelections,
       );
       if (cancel) {
         return;
       }
     }
 
-    this.#state.selected = selected;
+    this.#state.selections = selections;
     
-    if (this.#state.selected.length === 1) {
+    if (this.#state.selections.length === 1) {
       this.#els.search.setAttribute("placeholder", "");
-    } else if (this.#state.selected.length === 0) {
+    } else if (this.#state.selections.length === 0) {
       this.#els.search.setAttribute("placeholder", "Search...");
     }
     
     if (!silent) {
-      await this.#state.events?.afterSelectedChanged?.(
-        this.#state.selected,
-        prevSelected,
+      await this.#state.events?.afterSelectionsChanged?.(
+        this.#state.selections,
+        prevSelections,
       );
     }
   }

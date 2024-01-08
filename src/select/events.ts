@@ -10,12 +10,12 @@ export interface Events {
     prevOptions: Options,
   ) => void | Promise<void>;
 
-  beforeSelectedChanged?: (
-    selected: Array<string>,
-    prevSelected: Array<string>,
+  beforeSelectionsChanged?: (
+    selections: Array<string>,
+    prevSelections: Array<string>,
   ) => boolean | void | Promise<boolean | void>;
-  afterSelectedChanged?: (
-    selected: Array<string>,
-    prevSelected: Array<string>,
+  afterSelectionsChanged?: (
+    selections: Array<string>,
+    prevSelections: Array<string>,
   ) => void | Promise<void>;
 }

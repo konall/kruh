@@ -1,12 +1,12 @@
 import { Events } from "./events.ts";
-import { Options, OptionsCallback } from "./options.ts";
+import { Options, Source } from "./options.ts";
 
 export interface Settings {
   el: HTMLSelectElement;
-  options: OptionsCallback;
+  source: Source;
   initialOptions?: Options;
   preloadOptions?: boolean;
-  selected?: Array<string>;
+  selections?: Array<string>;
   events?: Events;
 
   allowDuplicates?: boolean;

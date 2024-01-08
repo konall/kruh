@@ -7,7 +7,7 @@ export interface Option {
 export type Options = Array<string | Option>;
 export type InternalOptions = Map<string, string | Option>;
 
-export type OptionsCallback = (
+export type Source = (
   q: string,
   currentOptions: Options,
 ) => Options | Promise<Options>;
