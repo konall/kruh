@@ -1,0 +1,21 @@
+{
+  "imports": {
+    "test": "https://deno.land/std@0.209.0/assert/mod.ts",
+    "deno_dom": "https://deno.land/x/deno_dom@v0.1.43/deno-dom-wasm-noinit.ts",
+    "dnt": "https://deno.land/x/dnt@0.39.0/mod.ts",
+    "esbuild": "https://deno.land/x/esbuild@v0.19.2/mod.js",
+    "esbuild-deno-loader": "https://deno.land/x/esbuild_deno_loader@0.8.2/mod.ts"
+  },
+  "tasks": {
+    "dev": "deno run -A --watch=tests/,src/ tests/web/server.test.ts"
+  },
+  "compilerOptions": {
+    "noImplicitAny": false,
+    "lib": [
+      "deno.ns",
+      "dom",
+      "dom.iterable",
+      "dom.asynciterable"
+    ]
+  }
+}
