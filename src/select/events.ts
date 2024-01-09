@@ -1,21 +1,44 @@
 import { Options } from "./options.ts";
 
+export type CancellableEventResult = boolean | void | Promise<boolean | void>;
+export type NormalEventResult = void | Promise<void>;
+
 export interface Events {
-  beforeOptionsLoaded?: (
-    q: string,
+  whenInitialised: () => NormalEventResult;
+
+  beforeOptionsLoaded: (
+    searchText: string,
     currentOptions: Options,
-  ) => boolean | void | Promise<boolean | void>;
-  afterOptionsLoaded?: (
+  ) => CancellableEventResult;
+  afterOptionsLoaded: (
     options: Options,
     prevOptions: Options,
-  ) => void | Promise<void>;
+  ) => NormalEventResult;
 
-  beforeSelectionsChanged?: (
+  beforeCustomOptionAdded: (
+    customOption: string,
+    currentOptions: Options,
+  ) => CancellableEventResult;
+  afterCustomOptionAdded: (
+    newOption: string,
+    prevOptions: Options,
+  ) => NormalEventResult;
+
+  beforeSearchTextChanged: (
+    searchText: string,
+    currentSearchText: string,
+  ) => CancellableEventResult;
+  afterSearchTextChanged: (
+    searchText: string,
+    prevSearchText: string,
+  ) => NormalEventResult;
+
+  beforeSelectionsChanged: (
+    selections: Array<string>,
+    currentSelections: Array<string>,
+  ) => CancellableEventResult;
+  afterSelectionsChanged: (
     selections: Array<string>,
     prevSelections: Array<string>,
-  ) => boolean | void | Promise<boolean | void>;
-  afterSelectionsChanged?: (
-    selections: Array<string>,
-    prevSelections: Array<string>,
-  ) => void | Promise<void>;
+  ) => NormalEventResult;
 }

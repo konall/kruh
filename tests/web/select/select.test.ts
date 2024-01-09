@@ -1,7 +1,7 @@
 import { Select } from "../../../mod.ts";
 
-const select = new Select({
-  el: document.querySelector("#x")!,
+const select = new Select(document.querySelector("#x")!);
+select.init({
   source: async (q) => {
     if (q.length < 3) {
       return [];
@@ -15,6 +15,12 @@ const select = new Select({
       extra: x.title.length,
     }));
   },
+  
+  events: {
+    whenInitialised: async () => {
+      await select.loadOptions("est");
+    }
+  }
 });
 
 document.addEventListener("keypress", (e) => {
@@ -24,9 +30,3 @@ document.addEventListener("keypress", (e) => {
     console.log(select.selections());
   }
 });
-
-const el = document.createElement("div");
-el.innerHTML = `
-  <div contenteditable><span style="color:red">XYZ</span>abc<button>Click</button></div>
-`;
-document.body.appendChild(el);

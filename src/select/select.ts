@@ -8,6 +8,7 @@ import {
 import { Settings } from "./settings.ts";
 
 interface Elements {
+  original: HTMLSelectElement;
   container: HTMLDivElement;
   selections: HTMLDivElement;
   search: HTMLInputElement;
@@ -17,29 +18,53 @@ interface Elements {
 interface State {
   options: InternalOptions;
   selections: Array<string>;
-  events: Events;
   source: Source;
-  q: string;
+  searchText: string;
 }
 
-interface Config {
-  allowDuplicates: boolean;
+export interface Config {
+  source: Source;
+  initialOptions?: Options;
+  preloadOptions?: boolean;
+  initialSelections?: Array<string>;
+
+  events?: Partial<Events>;
+
+  settings?: Partial<Settings>;
 }
 
 export class Select {
   #els: Elements;
   #state: State;
-  #config: Config;
+  #events: Partial<Events>;
+  #settings: Settings;
 
-  constructor(settings: Settings) {
+  constructor(el: HTMLSelectElement) {
+    this.#state = {
+      options: new Map(),
+      selections: [],
+      source: () => [],
+      searchText: "",
+    };
+
+    this.#events = {};
+
+    this.#settings = {
+      allowCreatingOptions: false,
+      allowDuplicateSelections: false,
+      maxOptions: 50,
+      maxSelections: 1,
+      placeholder: "Search...",
+    };
+
     this.#els = (() => {
-      const initEl = (() => {
-        if (!document.body.contains(settings.el)) {
+      const originalEl = (() => {
+        if (!document.body.contains(el)) {
           throw new Error(
             "Element is not present in the visible document body",
           );
         }
-        return settings.el;
+        return el;
       })();
 
       const containerEl = (() => {
@@ -66,17 +91,17 @@ export class Select {
         const el = document.createElement("div");
         return el;
       })();
-      
+
       const searchEl = (() => {
         const el = document.createElement("input");
-        
-        el.setAttribute("placeholder", "Search...");
+
+        el.setAttribute("placeholder", this.#settings.placeholder);
 
         el.addEventListener("beforeinput", (e) => {
         });
         el.addEventListener("input", async (e) => {
-          this.#state.q = el.value;
-          await this.loadOptions(this.#state.q);
+          this.#state.searchText = el.value;
+          await this.#loadOptions(this.#state.searchText);
         });
         el.addEventListener("keydown", (e) => {
           if (e.key === "ArrowDown") {
@@ -87,7 +112,7 @@ export class Select {
             }
           }
         });
-        
+
         return el;
       })();
 
@@ -95,7 +120,7 @@ export class Select {
         const el = document.createElement("div");
 
         el.setAttribute("id", "kruh-popover");
-        
+
         el.style.display = "none";
         el.style.position = "relative";
         el.style.zIndex = "1";
@@ -110,42 +135,46 @@ export class Select {
       })();
       boxEl.replaceChildren(selectionsEl, searchEl);
       containerEl.replaceChildren(boxEl, popoverEl);
-      initEl.replaceWith(containerEl);
 
       return {
+        original: originalEl,
         container: containerEl,
         selections: selectionsEl,
         search: searchEl,
         popover: popoverEl,
       };
     })();
+  }
 
-    this.#config = {
-      allowDuplicates: settings.allowDuplicates ?? false,
+  async init(config: Config) {
+    this.#events = config.events ?? {};
+
+    this.#settings = {
+      ...this.#settings,
+      ...config.settings,
     };
 
     this.#state = {
-      options: optionsArrayToMap(settings.initialOptions ?? []),
-      selections: settings.selections ?? [],
-      events: settings.events ?? {},
-      source: settings.source,
-      q: "",
+      options: optionsArrayToMap(config.initialOptions ?? []),
+      selections: config.initialSelections ?? [],
+      source: config.source,
+      searchText: "",
     };
 
-    if (settings.preloadOptions) {
-      this.loadOptions("", true, true);
+    if (config.preloadOptions) {
+      await this.#loadOptions("", true, true);
     }
+
+    this.#els.original.replaceWith(this.#els.container);
+    await this.#events.whenInitialised?.();
   }
 
-  options(): Options {
-    return [...this.#state.options.values()];
-  }
-  async setOptions(options: Options, force = false, silent = false) {
+  async #setOptions(options: Options, silent = false, force = false) {
     const prevOptions = new Map(this.#state.options);
 
     if (!force) {
-      const cancel = await this.#state.events?.beforeOptionsLoaded?.(
-        this.#state.q,
+      const cancel = await this.#events.beforeOptionsLoaded?.(
+        this.#state.searchText,
         [...prevOptions.values()],
       );
       if (cancel) {
@@ -175,12 +204,12 @@ export class Select {
 
         el.textContent = text;
 
-        el.addEventListener("click", () => {
+        el.addEventListener("click", async () => {
           if (
-            this.#config.allowDuplicates ||
+            this.#settings.allowDuplicateSelections ||
             !this.#state.selections.includes(value)
           ) {
-            this.setselections([...this.#state.selections, value]);
+            await this.#setSelections([...this.#state.selections, value]);
           }
         });
         el.addEventListener("keydown", (e) => {
@@ -214,27 +243,28 @@ export class Select {
     });
 
     if (!silent) {
-      await this.#state.events?.afterOptionsLoaded?.(
+      await this.#events.afterOptionsLoaded?.(
         [...this.#state.options.values()],
         [...prevOptions.values()],
       );
     }
   }
-  async loadOptions(q: string, force = false, silent = false) {
-    const newOptions = await this.#state.source(q, [
+  async #loadOptions(searchText: string, silent = false, force = false) {
+    const newOptions = await this.#state.source(searchText, [
       ...this.#state.options.values(),
     ]);
-    this.setOptions(newOptions, force, silent);
+    await this.#setOptions(newOptions, silent, force);
   }
 
-  selections(): Array<string> {
-    return this.#state.selections;
-  }
-  async setselections(selections: Array<string>, force = false, silent = false) {
+  async #setSelections(
+    selections: Array<string>,
+    silent = false,
+    force = false,
+  ) {
     const prevSelections = this.#state.selections;
 
     if (!force) {
-      const cancel = await this.#state.events?.beforeSelectionsChanged?.(
+      const cancel = await this.#events.beforeSelectionsChanged?.(
         selections,
         prevSelections,
       );
@@ -244,18 +274,71 @@ export class Select {
     }
 
     this.#state.selections = selections;
-    
+
     if (this.#state.selections.length === 1) {
       this.#els.search.setAttribute("placeholder", "");
     } else if (this.#state.selections.length === 0) {
-      this.#els.search.setAttribute("placeholder", "Search...");
+      this.#els.search.setAttribute("placeholder", this.#settings.placeholder);
     }
-    
+
     if (!silent) {
-      await this.#state.events?.afterSelectionsChanged?.(
+      await this.#events.afterSelectionsChanged?.(
         this.#state.selections,
         prevSelections,
       );
     }
+  }
+
+  async #setSearchText(searchText: string, silent = false, force = false) {
+    const prevSearchText = this.#state.searchText;
+
+    if (!force) {
+      const cancel = await this.#events.beforeSearchTextChanged?.(
+        searchText,
+        prevSearchText,
+      );
+      if (cancel) {
+        return;
+      }
+    }
+
+    this.#state.searchText = searchText;
+
+    if (!silent) {
+      await this.#events.afterSearchTextChanged?.(
+        this.#state.searchText,
+        prevSearchText,
+      );
+    }
+  }
+
+  options() {
+    return [...this.#state.options.values()];
+  }
+  async setOptions(
+    options: Options,
+    silent = false,
+  ) {
+    await this.#setOptions(options, silent, true);
+  }
+  async loadOptions(searchText: string, silent = false) {
+    await this.#loadOptions(searchText, silent, true);
+  }
+
+  selections(): Array<string> {
+    return this.#state.selections;
+  }
+  async setSelections(
+    selections: Array<string>,
+    silent = false,
+  ) {
+    await this.#setSelections(selections, silent, true);
+  }
+
+  searchText() {
+    return this.#state.searchText;
+  }
+  async setSearchText(searchText: string, silent = false) {
+    await this.#setSearchText(searchText, silent, true);
   }
 }
