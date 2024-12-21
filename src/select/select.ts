@@ -6,6 +6,7 @@ import {
   Source,
 } from "./options.ts";
 import { Settings } from "./settings.ts";
+import { Templates } from "./templates.ts";
 
 interface Elements {
   original: HTMLSelectElement;
@@ -29,8 +30,8 @@ export interface Config {
   initialSelections?: Array<string>;
 
   events?: Partial<Events>;
-
   settings?: Partial<Settings>;
+  templates?: Partial<Templates>;
 }
 
 export class Select {
@@ -38,6 +39,7 @@ export class Select {
   #state: State;
   #events: Partial<Events>;
   #settings: Settings;
+  #templates: Templates;
 
   constructor(el: HTMLSelectElement) {
     this.#state = {
@@ -47,14 +49,24 @@ export class Select {
       searchText: "",
     };
 
-    this.#events = {};
+    this.#events = {
+      afterSearchTextChanged: async (searchText) => {
+        await this.#loadOptions(searchText);
+      },
+      afterCustomOptionAdded: async (newOption) => {
+        await this.#setSelections([...this.#state.selections, newOption]);
+      },
+    };
 
     this.#settings = {
       allowCreatingOptions: false,
       allowDuplicateSelections: false,
-      maxOptions: 50,
       maxSelections: 1,
-      placeholder: "Search...",
+      placeholder: "",
+    };
+
+    this.#templates = {
+      option: (option) => (typeof option === "string") ? option : option.text,
     };
 
     this.#els = (() => {
@@ -147,7 +159,10 @@ export class Select {
   }
 
   async init(config: Config) {
-    this.#events = config.events ?? {};
+    this.#events = {
+      ...this.#events,
+      ...config.events,
+    };
 
     this.#settings = {
       ...this.#settings,
@@ -195,14 +210,13 @@ export class Select {
       if (!prevOptions.has(k)) {
         const el = document.createElement("li");
         const id = `x${k.replaceAll(`'`, `_`).replaceAll(`"`, `__`)}`;
-        const text = (typeof v === "string") ? v : v.text;
         const value = (typeof v === "string") ? v : v.value.toString();
 
         el.setAttribute("data-id", id);
         el.setAttribute("data-value", value);
         el.setAttribute("tabindex", "0");
 
-        el.textContent = text;
+        el.innerHTML = this.#templates.option(v);
 
         el.addEventListener("click", async () => {
           if (
@@ -220,12 +234,9 @@ export class Select {
               } else {
                 this.#els.search.focus();
                 setTimeout(() => {
-                  const range = document.createRange();
-                  range.selectNodeContents(this.#els.search);
-                  range.collapse(false);
-                  const selection = window.getSelection();
-                  selection?.removeAllRanges();
-                  selection?.addRange(range);
+                  this.#els.search.selectionStart =
+                    this.#els.search.selectionEnd =
+                      this.#els.search.value.length;
                 }, 0);
               }
             }
@@ -315,30 +326,24 @@ export class Select {
   options() {
     return [...this.#state.options.values()];
   }
-  async setOptions(
-    options: Options,
-    silent = false,
-  ) {
-    await this.#setOptions(options, silent, true);
+  async setOptions(options: Options, silent = false, force = true) {
+    await this.#setOptions(options, silent, force);
   }
-  async loadOptions(searchText: string, silent = false) {
-    await this.#loadOptions(searchText, silent, true);
+  async loadOptions(searchText: string, silent = false, force = true) {
+    await this.#loadOptions(searchText, silent, force);
   }
 
   selections(): Array<string> {
     return this.#state.selections;
   }
-  async setSelections(
-    selections: Array<string>,
-    silent = false,
-  ) {
-    await this.#setSelections(selections, silent, true);
+  async setSelections(selections: Array<string>, silent = false, force = true) {
+    await this.#setSelections(selections, silent, force);
   }
 
   searchText() {
     return this.#state.searchText;
   }
-  async setSearchText(searchText: string, silent = false) {
-    await this.#setSearchText(searchText, silent, true);
+  async setSearchText(searchText: string, silent = false, force = true) {
+    await this.#setSearchText(searchText, silent, force);
   }
 }

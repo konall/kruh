@@ -1,6 +1,6 @@
 import { Select } from "../../../mod.ts";
 
-const select = new Select(document.querySelector("#x")!);
+const select = new Select(document.querySelector("#select")!);
 select.init({
   source: async (q) => {
     if (q.length < 3) {
@@ -17,9 +17,9 @@ select.init({
   },
   
   events: {
-    whenInitialised: async () => {
-      await select.loadOptions("est");
-    }
+    // whenInitialised: async () => {
+    //   await select.loadOptions("est");
+    // }
   }
 });
 

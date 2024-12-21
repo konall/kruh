@@ -24,7 +24,8 @@ Deno.serve(async (req) => {
           <script type="module" src="./tests/web/${Deno.args[0]}.test.ts"></script>
         </head>
         <body>
-          <select id="x"></select>
+          <select id="select"></select>
+          <div id="calendar"></div>
         </body>
       </html>
     `,
